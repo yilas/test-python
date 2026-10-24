@@ -10,6 +10,7 @@ def projection(initial: float, target: float, rate: float) -> list[float]:
     balances = [float(initial)]
     while balances[-1] < target:
         balances.append(balances[-1] * (1 + rate))
+    print(balances)
     return balances
 
 
