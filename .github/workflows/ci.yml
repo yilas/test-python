@@ -1,0 +1,109 @@
+name: CI - learning pipeline
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain pipeline
+        run: echo "Stage 1 - preparing quality gates"
+      - name: Display runner
+        run: uname -a
+      - name: Display event
+        run: echo "Event is $GITHUB_EVENT_NAME"
+  lint:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Ruff
+        run: pip install ruff
+      - name: Lint
+        run: ruff check .
+      - name: Check formatting
+        run: ruff format --check .
+  unit-tests:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install project
+        run: pip install -e '.[dev]'
+      - name: Run tests with coverage
+        run: pytest --cov=capital_growth --cov-report=xml --cov-report=term-missing --cov-fail-under=90
+      - name: Upload coverage
+        if: matrix.python == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+  security:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install security scanners
+        run: pip install bandit pip-audit
+      - name: Static security analysis
+        run: bandit -r src/
+      - name: Audit project dependencies
+        run: pip-audit .
+  package:
+    needs: [lint, unit-tests, security]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install packaging tools
+        run: pip install build twine
+      - name: Build wheel and source archive
+        run: python -m build
+      - name: Check metadata
+        run: twine check dist/*
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
+  smoke-test:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions
+          path: dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install actual wheel
+        run: pip install dist/*.whl
+      - name: Execute published CLI
+        run: capital-growth --initial 100 --target 121 --rate 0.1
+  summary:
+    needs: [smoke-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain successful delivery candidate
+        run: echo "All CI stages passed; artifact is ready for a tagged release." >> "$GITHUB_STEP_SUMMARY"
