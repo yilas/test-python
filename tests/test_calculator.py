@@ -21,9 +21,16 @@ def test_projection():
 
 @pytest.mark.parametrize(
     "initial,target,rate",
-    [(0, 100, 0.03), (-1, 100, 0.03), (100, 0, 0.03),
-     (100, 200, 0), (100, 200, -0.01), (100, 200, 1.01)],
+    [
+        (0, 100, 0.03),
+        (-1, 100, 0.03),
+        (100, 0, 0.03),
+        (100, 200, 0),
+        (100, 200, -0.01),
+        (100, 200, 1.01),
+    ],
 )
+
 def test_invalid(initial, target, rate):
     with pytest.raises(ValueError):
         projection(initial, target, rate)
