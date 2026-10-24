@@ -1,1 +1,0 @@
-"""Compound interest demo package."""
