@@ -1,4 +1,5 @@
 """Command-line interface."""
+
 import argparse
 
 from capital_growth.calculator import projection
