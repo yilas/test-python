@@ -1,0 +1,66 @@
+name: Demo - jobs en serie et parallele
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preparation:
+    name: "1 - Preparation"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Message de bienvenue
+        run: echo "Demarrage de la pipeline"
+      - name: Date du runner
+        run: date
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+  python:
+    name: "2A - Test Python"
+    needs: preparation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verifier la syntaxe
+        run: python -m py_compile main.py
+      - name: Executer le programme
+        run: python main.py | tail -n 5
+
+  systeme:
+    name: "2B - Test systeme"
+    needs: preparation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Afficher le systeme
+        run: uname -a
+      - name: Afficher l'espace disque
+        run: df -h
+      - name: Simuler un controle
+        run: |
+          echo "Controle en cours"
+          sleep 5
+          echo "Controle termine"
+
+  livraison:
+    name: "3 - Livraison fictive"
+    needs: [python, systeme]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirmer les dependances
+        run: echo "Les deux tests paralleles sont termines"
+      - name: Simuler le deploiement
+        run: |
+          echo "Deploiement fictif"
+          sleep 3
+      - name: Terminer
+        run: echo "Pipeline terminee"
